@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="x-ms-noviewer" content="true">
+  <title>MASTER-MAT Builder</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="container">
+
+    <!-- Cabecera -->
+    <header class="hero">
+      <h1>MASTER-MAT Builder</h1>
+      <p>Genera ficheros de carga para órdenes (MASTER) y materiales (MAT).</p>
+    </header>
+
+    <!-- Fila superior: Controles | Log | Instrucciones -->
+    <div class="top-row">
+
+      <!-- Controles: archivo + búsquedas -->
+      <div class="controls-col">
+        <div class="panel panel-sm panel-busquedas">
+          <div class="ba-group">
+            <h3 class="ba-title">FICHEROS DE ENTRADA</h3>
+            <label class="field">
+              <span>Cliente</span>
+              <select id="clienteSelect">
+                <option value="EIN">EIN</option>
+                <option value="VLG">VLG</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Workpackage-Summary (.xlsx o .pdf)</span>
+              <input type="file" id="workpackageFile" accept=".xlsx,.xlsm,.xls,.pdf">
+            </label>
+            <label class="field">
+              <span id="baseLabel">Base de datos EIN (.xlsx)</span>
+              <input type="file" id="baseEinFile" accept=".xlsx,.xlsm,.xls">
+            </label>
+          </div>
+          <div class="ba-sep"></div>
+          <div class="ba-group">
+            <h3 class="ba-title">BÚSQUEDAS</h3>
+            <div class="actions col">
+              <button id="execMasterBtn" class="btn-search">Ejecutar MASTER</button>
+              <button id="execMatsBtn" class="btn-search" disabled>Ejecutar MAT</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log -->
+      <pre id="statusBox" class="status-col"></pre>
+
+      <!-- Instrucciones -->
+      <div class="panel instrucciones-col">
+        <h2>Instrucciones de uso</h2>
+        <hr class="inst-hr">
+        <div class="inst-steps">
+          <div class="inst-step"><span class="inst-label">PASO 1 - Cargar ficheros:</span> Selecciona el cliente, el Workpackage-Summary y la Base de datos antes de ejecutar.</div>
+          <div class="inst-step"><span class="inst-label">PASO 2 - Ejecutar MASTER:</span> Genera la tabla MASTER con las tareas del Workpackage cruzadas con la Base de datos. Ejecutar siempre primero.</div>
+          <div class="inst-step"><span class="inst-label">PASO 3 - Ejecutar MAT:</span> Genera la tabla MAT con los materiales y utillaje (MAT=SI) de cada tarea. Requiere MASTER ejecutado previamente.</div>
+          <div class="inst-step"><span class="inst-label">PASO 4 - Revisar resultados:</span> Las filas en <span class="lbl-rojo">ROJO</span> requieren control manual. Edita las celdas que quieras actualizar en la Base de datos; quedan marcadas en <span class="lbl-verde">VERDE</span>.</div>
+          <div class="inst-step"><span class="inst-label">PASO 5 - Actualizar Base de datos:</span> Usa los botones de actualización para descargar la Base de datos con los cambios aplicados. Reemplaza el fichero original con el descargado.</div>
+          <div class="inst-nota">NOTA: El orden correcto es siempre MASTER &#8594; MAT.</div>
+        </div>
+        <div class="ba-sep" style="margin-top:8px;"></div>
+        <h3 class="ba-title" style="margin:6px 0 4px 0;">ACTUALIZACIONES (BASE DE DATOS)</h3>
+        <div class="actions col">
+          <button id="updateMasterBaseBtn" class="btn-update">Actualizar MASTER &#8594; Base de datos (celdas verdes)</button>
+          <button id="updateMatsBaseBtn" class="btn-update">Actualizar MAT &#8594; Base de datos (celdas verdes)</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tabla MASTER (ancho completo) -->
+    <section class="panel table-panel">
+      <div class="table-panel-head">
+        <div class="panel-head">
+          <h2>Resultado MASTER</h2>
+          <span class="hint head-hint">Celdas editadas marcadas en verde.</span>
+        </div>
+        <div class="actions">
+          <button id="downloadMasterXlsxBtn">Descargar MASTER XLSX</button>
+        </div>
+        <div id="masterSummary" class="summary"></div>
+        <!-- Edición en bloque MASTER -->
+        <div class="bulk-bar" id="masterBulkBar">
+          <span class="ba-title">EDICIÓN EN BLOQUE:</span>
+          <select id="masterBulkField" class="tools-select-sm"><option value="">— columna —</option></select>
+          <span class="tools-scope-label">Valor actual:</span>
+          <input id="masterBulkFrom" type="text" class="tools-input" placeholder="vacío = todas">
+          <span class="tools-scope-label">→ Nuevo valor:</span>
+          <input id="masterBulkTo" type="text" class="tools-input" placeholder="nuevo valor">
+          <button id="masterBulkApplyBtn" class="tools-btn btn-search">Aplicar</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="masterTable"></table>
+      </div>
+    </section>
+
+    <!-- Tabla MAT (ancho completo) -->
+    <section class="panel table-panel">
+      <div class="table-panel-head">
+        <div class="panel-head">
+          <h2>Resultado MAT</h2>
+          <span class="hint head-hint">Celdas editadas marcadas en verde.</span>
+        </div>
+        <div class="actions">
+          <button id="downloadMatsXlsxBtn">Descargar MAT XLSX</button>
+        </div>
+        <div id="matsSummary" class="summary"></div>
+        <!-- Edición en bloque MAT -->
+        <div class="bulk-bar" id="matsBulkBar">
+          <span class="ba-title">EDICIÓN EN BLOQUE:</span>
+          <select id="matsBulkField" class="tools-select-sm"><option value="">— columna —</option></select>
+          <span class="tools-scope-label">Valor actual:</span>
+          <input id="matsBulkFrom" type="text" class="tools-input" placeholder="vacío = todas">
+          <span class="tools-scope-label">→ Nuevo valor:</span>
+          <input id="matsBulkTo" type="text" class="tools-input" placeholder="nuevo valor">
+          <button id="matsBulkApplyBtn" class="tools-btn btn-search">Aplicar</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="matsTable"></table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

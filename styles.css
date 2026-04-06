@@ -1,0 +1,382 @@
+:root {
+  --bg: #f4f7f8;
+  --panel: #ffffff;
+  --ink: #102a2d;
+  --muted: #587070;
+  --brand: #005f73;
+  --brand-soft: #e6f2f4;
+  --danger: #c1121f;
+  --ok: #2d6a4f;
+  --line: #d8e3e6;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--ink);
+  background: radial-gradient(circle at top right, #d6eef2 0%, var(--bg) 45%);
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT PRINCIPAL  (columna flex fija)
+═══════════════════════════════════════════ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 6px 10px;
+  gap: 5px;
+  overflow: hidden;
+}
+
+/* ── Cabecera ─────────────────────────── */
+
+.hero {
+  flex-shrink: 0;
+  background: linear-gradient(120deg, #0a9396 0%, #005f73 70%);
+  color: #fff;
+  padding: 7px 14px;
+  border-radius: 10px;
+}
+
+.hero h1 { margin: 0 0 1px 0; font-size: 1.05rem; }
+.hero p  { margin: 0; opacity: .92; font-size: 0.82rem; }
+
+/* ── Fila superior ────────────────────── */
+
+.top-row {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+/* Columna controles */
+.controls-col {
+  flex: 0 0 255px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Log (centro) */
+.status-col {
+  flex: 1;
+  margin: 0;
+  background: #0e1e25;
+  color: #d8f2ff;
+  border-radius: 9px;
+  padding: 6px 9px;
+  font-size: 0.73rem;
+  font-family: "Consolas", "Courier New", monospace;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+/* Instrucciones (derecha) */
+.instrucciones-col {
+  flex: 1.6;
+  overflow-y: auto;
+  font-size: 0.81rem;
+  min-width: 0;
+}
+
+.instrucciones-col h2 { margin: 0 0 2px 0; font-size: 0.97rem; }
+
+.inst-hr {
+  border: none;
+  border-top: 1px dashed var(--line);
+  margin: 3px 0 6px 0;
+}
+
+.inst-steps { display: flex; flex-direction: column; gap: 4px; }
+.inst-step  { color: var(--muted); line-height: 1.38; }
+.inst-label { font-weight: 700; color: var(--ink); }
+.lbl-rojo   { color: var(--danger); font-weight: 700; }
+.lbl-verde  { color: var(--ok); font-weight: 700; }
+.inst-nota  { margin-top: 5px; color: var(--danger); font-weight: 700; }
+
+/* ── Barra de edición en bloque (dentro de cada tabla) ── */
+
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  width: 100%;
+  padding-top: 4px;
+}
+
+.tools-scope-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.tools-select-sm {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 2px 5px;
+  font-size: 0.75rem;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  max-width: 140px;
+}
+
+.tools-input {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  width: 90px;
+  color: var(--ink);
+}
+
+.tools-btn {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 2px 9px;
+  font-size: 0.75rem;
+  background: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tools-btn:hover { background: #f0f6f8; }
+.tools-btn.btn-search { background: #ffff00; font-weight: 700; }
+.tools-btn.btn-search:hover { background: #ffff00; filter: brightness(0.93); }
+
+/* ── Fila de filtros tipo Excel bajo el thead ── */
+
+.filter-row th {
+  background: var(--brand-soft);
+  padding: 2px 3px;
+  position: sticky;
+  top: 22px;   /* justo bajo la fila de cabecera */
+  z-index: 1;
+}
+
+.filter-row th select {
+  width: 100%;
+  border: 1px solid #b0ccd4;
+  border-radius: 3px;
+  padding: 1px 2px;
+  font-size: 0.68rem;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.filter-row th select.active-filter {
+  background: #d4f7d4;
+  border-color: var(--ok);
+  font-weight: 700;
+}
+
+/* ── Paneles de tabla (MASTER y MAT apilados) ── */
+
+.table-panel {
+  flex: 1;           /* reparten el espacio restante al 50% cada uno */
+  min-height: 0;     /* imprescindible para que flex recorte correctamente */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.table-panel-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 3px;
+}
+
+.table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;   /* sin scroll horizontal: columnas se adaptan al ancho */
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+/* ═══════════════════════════════════════════
+   PANELES GENÉRICOS
+═══════════════════════════════════════════ */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 7px 10px;
+}
+
+.panel-sm { padding: 6px 9px; }
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.panel-head h2 { margin: 0; font-size: 0.95rem; }
+
+.head-hint { color: var(--muted); font-size: 0.80rem; white-space: nowrap; }
+
+.hint { color: var(--muted); margin: 0 0 4px 0; font-size: 0.82rem; }
+
+.summary { color: var(--muted); font-size: 0.80rem; }
+
+/* ── Búsquedas / Actualizaciones ──────── */
+
+.panel-busquedas {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ba-sep { height: 1px; background: var(--line); margin: 2px 0; }
+
+.ba-group { display: flex; flex-direction: column; gap: 3px; }
+
+.ba-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+/* ── Formulario ───────────────────────── */
+
+.field { display: flex; flex-direction: column; gap: 3px; }
+.field span { font-size: 0.82rem; color: var(--muted); }
+
+select {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 0.81rem;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* ── Botones ──────────────────────────── */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.actions.col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.81rem;
+}
+
+button:hover { background: #f8fbfc; }
+
+.btn-search {
+  background: #ffff00;
+  color: #111;
+  border-color: #ccc;
+  font-weight: 700;
+}
+
+.btn-search:hover { background: #ffff00; filter: brightness(0.93); }
+
+.btn-search:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-update {
+  background: var(--ok);
+  color: #fff;
+  border-color: var(--ok);
+  font-weight: 700;
+}
+
+.btn-update:hover { background: var(--ok); filter: brightness(1.1); }
+
+/* ═══════════════════════════════════════════
+   TABLA
+═══════════════════════════════════════════ */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;   /* columnas de igual ancho, sin overflow horizontal */
+  background: #fff;
+}
+
+th, td {
+  border-bottom: 1px solid var(--line);
+  padding: 4px 5px;
+  text-align: left;
+  vertical-align: top;
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;   /* evita que el texto desborde creando scroll horizontal */
+}
+
+th {
+  background: var(--brand-soft);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+tr.manual { background: #fff3f3; }
+
+tbody tr:hover { background: #eef6fb; }
+tbody tr.manual:hover { background: #fde8e8; }
+
+.editable {
+  background: #fffdf2;
+  cursor: text;
+  white-space: nowrap;
+}
+
+.editable:focus {
+  outline: 2px solid #94d2bd;
+  background: #fff;
+  white-space: normal;   /* al editar muestra el contenido completo */
+  overflow: visible;
+}
+
+td.green-marked { background: #d4f7d4 !important; }
+
+/* ── Badges ───────────────────────────── */
+
+.badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.70rem;
+  font-weight: 600;
+}
+
+.badge.ok     { background: #dff5e8; color: var(--ok); }
+.badge.manual { background: #ffe2e5; color: var(--danger); }
