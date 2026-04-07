@@ -29,8 +29,7 @@
     "manualReasons",
     "num",
     "wo",
-    "title",
-    "criterioBusqueda"
+    "title"
   ]);
 
   const statusBox = document.getElementById("statusBox");
