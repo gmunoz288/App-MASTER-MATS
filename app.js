@@ -1437,6 +1437,7 @@
     // MASTER: TEAM=2, AMTOSS=3, REMARKS=4, ANEXO=5, IR/CT=6, MAT SI/NO=7
     // MAT:    TEAM=2, MAT SI/NO=7, P/N=8, DESC=9, QTY=10, TYPE=11, NOTAS=12
     const FIELD_TO_COL = {
+      criterioBusqueda: 0,
       team: 2, amtoss: 3, remarks: 4, anexo: 5, irCt: 6, matSiNo: 7,
       pn: 8, descripcion: 9, qty: 10, type: 11, notas: 12
     };
@@ -1480,20 +1481,22 @@
       }
 
       if (matchingRows.length > 0) {
+        // Coincidencia encontrada: sobrescribir en todas las filas coincidentes
+        // No escribir criterioBusqueda (col 0) en actualizaciones — solo en creaciones
         for (const i of matchingRows) {
           for (const field of fields) {
+            if (field === "criterioBusqueda") continue;
             matrix[i][FIELD_TO_COL[field]] = appRow[field] ?? "";
           }
         }
         nActualizadas++;
       } else {
+        // Sin coincidencia: crear fila nueva solo si criterioBusqueda está marcado en verde
+        if (!fields.has("criterioBusqueda")) { nSaltadas++; continue; }
         const newRow = Array(13).fill("");
-        newRow[0] = appRow.criterioBusqueda ?? "";
-        newRow[1] = appRow.wo ?? "";
         for (const field of fields) {
           newRow[FIELD_TO_COL[field]] = appRow[field] ?? "";
         }
-        if (!fields.has("team") && appRow.team) newRow[2] = appRow.team;
         matrix.push(newRow);
         nCreadas++;
       }
