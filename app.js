@@ -1,4 +1,4 @@
-﻿/* global XLSX, pdfjsLib */
+/* global XLSX, pdfjsLib */
 (function () {
   const state = {
     workpackage: [],
@@ -137,7 +137,7 @@
 
     for (let i = 0; i < baseEin.length; i += 1) {
       const key = normalize(baseEin[i].criterio);
-      if (!key) continue;
+      if (!key || key.length < 3) continue;
       if (!tMatch.includes(normalizeForMatch(key))) continue;
 
       let bucket = 1;
@@ -150,6 +150,19 @@
       }
     }
     return bestIndex;
+  }
+
+  function criterioIsWholeToken(criterio, titleNormalized) {
+    // Verifica que el criterio aparece como token completo en el título normalizado.
+    // Tres patrones cubren los casos reales de la base de datos:
+    //   pa: rodeado por separadores limpios (espacio, /, (, ), *, _, ., :)
+    //   pb: precedido por guión (criterio embebido en código compuesto: PREFIJO-CRITERIO-SUFIJO)
+    //   pc: precedido por separador limpio, seguido de sufijo corto con guión (ej. ZL-415-01-1-RH)
+    const e = criterio.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pa = new RegExp(`(?:^|[ /(*_])${e}(?=[ /*(). _:]|$)`);
+    const pb = new RegExp(`(?<=-)${e}(?=[-/ .(]|$)`);
+    const pc = new RegExp(`(?:^|[ /(*_])${e}(?=-[A-Z0-9]{1,8}(?:[ /.(]|$))`);
+    return pa.test(titleNormalized) || pb.test(titleNormalized) || pc.test(titleNormalized);
   }
 
   function evaluateMasterRow(row) {
@@ -172,6 +185,10 @@
       if (!normalize(row[field])) reasons.push(`Campo obligatorio vacio: ${field}`);
     });
 
+    if (!criterioIsWholeToken(normalizeForMatch(row.criterioBusqueda), normalizeForMatch(row.title))) {
+      reasons.push("Posible falso positivo: criterio no aparece como token completo en el titulo");
+    }
+
     row.manualReasons = reasons;
     row.status = reasons.length ? "CONTROL MANUAL" : "OK";
   }
@@ -182,6 +199,9 @@
       if (!normalize(row[field])) reasons.push(`Campo obligatorio vacio: ${field}`);
     });
     if (!normalize(row.team)) reasons.push("TEAM vacio");
+    if (!criterioIsWholeToken(normalizeForMatch(row.criterioBusqueda), normalizeForMatch(row.title))) {
+      reasons.push("Posible falso positivo: criterio no aparece como token completo en el titulo");
+    }
     row.manualReasons = reasons;
     row.status = reasons.length ? "CONTROL MANUAL" : "OK";
   }
@@ -1054,11 +1074,11 @@
 
     for (let i = 0; i < baseVlg.length; i++) {
       const key = normalizeUpper(normalize(baseVlg[i].criterio));
-      if (!key) continue;
+      if (!key || key.length < 3) continue;
 
       let matches = false;
 
-      // Coincidencia exacta o el criterio contiene la clave
+      // Coincidencia exacta o substring (igual que InStr de la macro VLG)
       if (criterioUp === key || criterioUp.includes(key) || key.includes(criterioUp)) {
         matches = true;
       }
@@ -1066,7 +1086,7 @@
       // Búsqueda exhaustiva: alguna de las referencias extraídas coincide con la clave
       if (!matches) {
         for (const ref of allRefs) {
-          if (ref === key || key.includes(ref) || ref.includes(key)) {
+          if (ref === key || ref.includes(key) || key.includes(ref)) {
             matches = true;
             break;
           }
