@@ -516,14 +516,8 @@
     if (!rows[rowIdx]) return;
 
     const newVal = normalize(td.textContent);
-    const oldVal = normalize(td.dataset.originalValue ?? "");
-    const changed = newVal !== oldVal;
 
     rows[rowIdx][field] = newVal;
-
-    if (changed && confirm("¿Marcar esta celda en verde para actualizar la Base de datos?")) {
-      state.greenEdits[datasetName].add(`${rowIdx}-${field}`);
-    }
 
     if (datasetName === "master") {
       evaluateMasterRow(rows[rowIdx]);
@@ -1565,28 +1559,62 @@
     }
   });
 
-  function handleGreenUnmark(event) {
+  // Menú contextual para marcar/desmarcar celda en verde (clic derecho)
+  let contextMenu = null;
+
+  function removeContextMenu() {
+    if (contextMenu) { contextMenu.remove(); contextMenu = null; }
+  }
+
+  function handleCellContextMenu(event) {
     const td = event.target;
     if (!(td instanceof HTMLElement)) return;
-    if (!td.matches("td.green-marked")) return;
+    if (!td.matches("td[data-editable='1']")) return;
+
+    event.preventDefault();
+    removeContextMenu();
 
     const datasetName = td.dataset.dataset;
     const rowIdx = td.dataset.row;
     const field = td.dataset.field;
     if (!datasetName || rowIdx === undefined || !field) return;
 
-    if (confirm("¿Quitar el marcado verde de esta celda?")) {
-      state.greenEdits[datasetName].delete(`${rowIdx}-${field}`);
-      td.classList.remove("green-marked");
-    }
+    const isGreen = td.classList.contains("green-marked");
+    const menu = document.createElement("div");
+    menu.style.cssText = `position:fixed;z-index:9999;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:2px 2px 6px rgba(0,0,0,0.2);padding:4px 0;font-size:13px;`;
+    menu.style.left = `${event.clientX}px`;
+    menu.style.top = `${event.clientY}px`;
+
+    const option = document.createElement("div");
+    option.textContent = isGreen ? "Quitar marca (no actualizar BD)" : "Marcar para actualizar BD";
+    option.style.cssText = "padding:6px 16px;cursor:pointer;white-space:nowrap;";
+    option.addEventListener("mouseenter", () => { option.style.background = "#f0f0f0"; });
+    option.addEventListener("mouseleave", () => { option.style.background = ""; });
+    option.addEventListener("click", () => {
+      if (isGreen) {
+        state.greenEdits[datasetName].delete(`${rowIdx}-${field}`);
+        td.classList.remove("green-marked");
+      } else {
+        state.greenEdits[datasetName].add(`${rowIdx}-${field}`);
+        td.classList.add("green-marked");
+      }
+      removeContextMenu();
+    });
+
+    menu.appendChild(option);
+    document.body.appendChild(menu);
+    contextMenu = menu;
   }
+
+  document.addEventListener("click", removeContextMenu);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") removeContextMenu(); });
 
   masterTable.addEventListener("focus", handleCellFocus, true);
   matsTable.addEventListener("focus", handleCellFocus, true);
   masterTable.addEventListener("blur", handleCellEdit, true);
   matsTable.addEventListener("blur", handleCellEdit, true);
-  masterTable.addEventListener("click", handleGreenUnmark);
-  matsTable.addEventListener("click", handleGreenUnmark);
+  masterTable.addEventListener("contextmenu", handleCellContextMenu);
+  matsTable.addEventListener("contextmenu", handleCellContextMenu);
 
   // Actualizar etiqueta de base de datos al cambiar de cliente
   document.getElementById("clienteSelect").addEventListener("change", () => {
