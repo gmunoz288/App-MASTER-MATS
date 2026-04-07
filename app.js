@@ -152,19 +152,6 @@
     return bestIndex;
   }
 
-  function criterioIsWholeToken(criterio, titleNormalized) {
-    // Verifica que el criterio aparece como token completo en el título normalizado.
-    // Tres patrones cubren los casos reales de la base de datos:
-    //   pa: rodeado por separadores limpios (espacio, /, (, ), *, _, ., :)
-    //   pb: precedido por guión (criterio embebido en código compuesto: PREFIJO-CRITERIO-SUFIJO)
-    //   pc: precedido por separador limpio, seguido de sufijo corto con guión (ej. ZL-415-01-1-RH)
-    const e = criterio.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pa = new RegExp(`(?:^|[ /(*_])${e}(?=[ /*(). _:]|$)`);
-    const pb = new RegExp(`(?<=-)${e}(?=[-/ .(]|$)`);
-    const pc = new RegExp(`(?:^|[ /(*_])${e}(?=-[A-Z0-9]{1,8}(?:[ /.(]|$))`);
-    return pa.test(titleNormalized) || pb.test(titleNormalized) || pc.test(titleNormalized);
-  }
-
   function evaluateMasterRow(row) {
     const reasons = [];
     const teamUpper = normalizeUpper(row.team);
@@ -185,10 +172,6 @@
       if (!normalize(row[field])) reasons.push(`Campo obligatorio vacio: ${field}`);
     });
 
-    if (!criterioIsWholeToken(normalizeForMatch(row.criterioBusqueda), normalizeForMatch(row.title))) {
-      reasons.push("Posible falso positivo: criterio no aparece como token completo en el titulo");
-    }
-
     row.manualReasons = reasons;
     row.status = reasons.length ? "CONTROL MANUAL" : "OK";
   }
@@ -199,9 +182,6 @@
       if (!normalize(row[field])) reasons.push(`Campo obligatorio vacio: ${field}`);
     });
     if (!normalize(row.team)) reasons.push("TEAM vacio");
-    if (!criterioIsWholeToken(normalizeForMatch(row.criterioBusqueda), normalizeForMatch(row.title))) {
-      reasons.push("Posible falso positivo: criterio no aparece como token completo en el titulo");
-    }
     row.manualReasons = reasons;
     row.status = reasons.length ? "CONTROL MANUAL" : "OK";
   }
@@ -1175,6 +1155,28 @@
   //  Sin condición P/N en el matching (diferencia clave con EIN)
   // ═══════════════════════════════════════════════════════════
 
+  // Replica exacta de ExtraerPatronReferencia VBA (solo para VLG MAT)
+  // Pre-procesa el título del WP para extraer el token de referencia antes de buscar en BD
+  function extractPatronReferencia(texto) {
+    const texto2 = (texto || "").trim();
+    if (!texto2) return "";
+    const palabras = texto2.split(" ");
+    for (const palabra of palabras) {
+      const p = palabra.trim();
+      if (p.length < 11) continue;
+      if (!/^[A-Za-z]/.test(p)) continue;
+      if (!p.includes("-")) continue;
+      if ((p.match(/-/g) || []).length < 2) continue;
+      if (p.includes(" ")) continue;
+      const partes = p.split("-");
+      if (partes.length < 3) continue;
+      const parte0 = partes[0];
+      if (!parte0[0].match(/[A-Za-z]/) || parte0.length < 2) continue;
+      if (/[0-9]/.test(parte0.slice(1))) return p.toUpperCase();
+    }
+    return "";
+  }
+
   function buildMatsVlg(workpackage, baseVlg, masterRows) {
     const rows = [];
     const matEligible = normalizeUpper(CONFIG.matEligibleValue);
@@ -1187,7 +1189,10 @@
       if (!title) continue;
 
       const wo = normalize(wp.wo);
-      const matchIndex = pickBestBaseMatchVlg(title, baseVlg);
+      // Replicar ExtraerPatronReferencia VBA: buscar en BD con el patrón extraído si existe
+      const patron = extractPatronReferencia(wp.title);
+      const titleForSearch = patron ? patron : title;
+      const matchIndex = pickBestBaseMatchVlg(titleForSearch, baseVlg);
 
       if (matchIndex === -1) {
         rows.push({
