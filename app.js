@@ -516,16 +516,19 @@
     if (!rows[rowIdx]) return;
 
     const newVal = normalize(td.textContent);
+    const oldVal = normalize(td.dataset.originalValue ?? "");
 
     rows[rowIdx][field] = newVal;
 
-    if (datasetName === "master") {
-      evaluateMasterRow(rows[rowIdx]);
-    } else {
-      evaluateMatsRow(rows[rowIdx]);
+    // Solo re-renderizar si el valor cambió (evita destruir el TD justo antes del contextmenu)
+    if (newVal !== oldVal) {
+      if (datasetName === "master") {
+        evaluateMasterRow(rows[rowIdx]);
+      } else {
+        evaluateMatsRow(rows[rowIdx]);
+      }
+      refreshTables();
     }
-
-    refreshTables();
   }
 
   function excelDateToText(value) {
@@ -1606,7 +1609,7 @@
     contextMenu = menu;
   }
 
-  document.addEventListener("click", removeContextMenu);
+  document.addEventListener("mousedown", (e) => { if (contextMenu && !contextMenu.contains(e.target)) removeContextMenu(); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") removeContextMenu(); });
 
   masterTable.addEventListener("focus", handleCellFocus, true);
