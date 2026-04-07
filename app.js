@@ -515,7 +515,8 @@
     const rows = datasetName === "master" ? state.master : state.mats;
     if (!rows[rowIdx]) return;
 
-    const newVal = normalize(td.textContent);
+    const rawVal = normalize(td.textContent);
+    const newVal = field === "amtoss" ? rawVal.replace(/,\s+/g, ",") : rawVal;
     const oldVal = normalize(td.dataset.originalValue ?? "");
 
     rows[rowIdx][field] = newVal;
