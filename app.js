@@ -1043,42 +1043,24 @@
   }
 
   function pickBestBaseMatchVlg(title, baseVlg) {
+    // Replica exacta de la macro VLG: InStr(criterio_wp, criterio_bd) > 0
+    // criterio_wp = parte antes del primer "/" (o título completo si no hay "/")
     const criterio = extractVlgCriterio(title);
     const criterioUp = normalizeUpper(criterio);
 
     let bestIndex = -1;
     let bestScore = { priority: false, length: 0 };
 
-    // Extraer todas las referencias posibles del criterio para búsqueda exhaustiva
-    const allRefs = extractAllReferences(criterio);
-
     for (let i = 0; i < baseVlg.length; i++) {
       const key = normalizeUpper(normalize(baseVlg[i].criterio));
       if (!key || key.length < 3) continue;
 
-      let matches = false;
-
-      // Coincidencia exacta o substring (igual que InStr de la macro VLG)
-      if (criterioUp === key || criterioUp.includes(key) || key.includes(criterioUp)) {
-        matches = true;
-      }
-
-      // Búsqueda exhaustiva: alguna de las referencias extraídas coincide con la clave
-      if (!matches) {
-        for (const ref of allRefs) {
-          if (ref === key || ref.includes(key) || key.includes(ref)) {
-            matches = true;
-            break;
-          }
-        }
-      }
-
-      if (!matches) continue;
+      // InStr(criterio_wp, criterio_bd): criterio de BD contenido en criterio del WP
+      if (!criterioUp.includes(key)) continue;
 
       const isPriority = isSpecificVlgPattern(key);
       const keyLen = key.length;
 
-      // Seleccionar la mejor: prioridad específica primero, luego longitud mayor
       if (!bestScore.priority && isPriority) {
         bestIndex = i;
         bestScore = { priority: true, length: keyLen };
