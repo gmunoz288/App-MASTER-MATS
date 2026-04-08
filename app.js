@@ -1041,9 +1041,8 @@
 
   function pickBestBaseMatchVlg(title, baseVlg) {
     // Replica exacta de la macro VLG: InStr(criterio_wp, criterio_bd) > 0
-    // criterio_wp = parte antes del primer "/" (o título completo si no hay "/")
-    const criterio = extractVlgCriterio(title);
-    const criterioUp = normalizeUpper(criterio);
+    // criterio_wp = título completo (la macro busca en todo el título, no solo antes del primer "/")
+    const criterioUp = normalizeUpper(normalize(title));
 
     let bestIndex = -1;
     let bestScore = { priority: false, length: 0 };
