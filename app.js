@@ -961,7 +961,7 @@
       ?? workbook.SheetNames.find((n) => normalizeUpper(n).includes("WORKPACKAGE"))
       ?? workbook.SheetNames[0];
     const ws = workbook.Sheets[sheetName];
-    const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+    const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
     return parseWorkpackageVlgFromMatrix(matrix);
   }
 
