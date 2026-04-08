@@ -916,7 +916,7 @@
   //  CRITERIO = parte del título antes del primer "/"
   // ═══════════════════════════════════════════════════════════
 
-  function parseWorkpackageVlgFromMatrix(matrix) {
+  function parseWorkpackageVlgFromMatrix(matrix, seqFmt) {
     if (!matrix.length) return [];
 
     // Buscar la fila de cabecera: puede estar en cualquier posición
@@ -945,8 +945,16 @@
       const r = matrix[i];
       const title = normalize(r[idxTitle]);
       if (!title) continue;
+      // Intentar obtener el texto formateado de la celda Seq.No. directamente del worksheet
+      // para preservar el punto tal como aparece en Excel (ej: "3.125" en lugar de 3125 o "3,125")
+      const wsRow = i; // matrix fue generada con header:1 sobre el ws completo, fila 0 = ws fila 0
+      const fmtVal = seqFmt && seqFmt[wsRow] && seqFmt[wsRow][idxNo] != null
+        ? seqFmt[wsRow][idxNo]
+        : normalize(r[idxNo]);
+      // Si el formato devuelto contiene coma (locale), reemplazar por punto
+      const numStr = String(fmtVal).replace(",", ".");
       rows.push({
-        num: normalize(r[idxNo]),
+        num: numStr.trim(),
         wo: normalize(r[idxWo]),
         ata: "",
         title: normalizeTitleDisplay(title)
@@ -962,7 +970,25 @@
       ?? workbook.SheetNames[0];
     const ws = workbook.Sheets[sheetName];
     const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: true });
-    return parseWorkpackageVlgFromMatrix(matrix);
+    // Construir mapa fila→col→textoFormateado para Seq.No.
+    // XLSX.utils.format_cell devuelve el texto tal como lo mostraría Excel (con el punto original),
+    // sin depender del locale del navegador (que convertiría 3.125 a "3,125" en es-ES).
+    const ref = ws["!ref"] ? XLSX.utils.decode_range(ws["!ref"]) : null;
+    const seqFmt = {}; // seqFmt[rowIndex] = texto formateado de la columna Seq.No.
+    if (ref) {
+      for (let R = ref.s.r; R <= ref.e.r; R++) {
+        for (let C = ref.s.c; C <= ref.e.c; C++) {
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = ws[addr];
+          if (cell && cell.t === "n") {
+            // Guardar el texto formateado por XLSX (usa el formato numérico del propio Excel)
+            if (!seqFmt[R]) seqFmt[R] = {};
+            seqFmt[R][C] = XLSX.utils.format_cell(cell);
+          }
+        }
+      }
+    }
+    return parseWorkpackageVlgFromMatrix(matrix, seqFmt);
   }
 
   // ═══════════════════════════════════════════════════════════
