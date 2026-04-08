@@ -15,23 +15,21 @@
 html, body {
   margin: 0;
   height: 100%;
-  overflow: hidden;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   color: var(--ink);
   background: radial-gradient(circle at top right, #d6eef2 0%, var(--bg) 45%);
 }
 
 /* ═══════════════════════════════════════════
-   LAYOUT PRINCIPAL  (columna flex fija)
+   LAYOUT PRINCIPAL  (columna flex, scrollable)
 ═══════════════════════════════════════════ */
 
 .container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
   padding: 6px 10px;
   gap: 5px;
-  overflow: hidden;
 }
 
 /* ── Cabecera ─────────────────────────── */
@@ -50,7 +48,6 @@ html, body {
 /* ── Fila superior ────────────────────── */
 
 .top-row {
-  flex-shrink: 0;
   display: flex;
   gap: 8px;
   align-items: stretch;
@@ -68,6 +65,8 @@ html, body {
 .status-col {
   flex: 1;
   margin: 0;
+  min-height: 120px;
+  max-height: 220px;
   background: #0e1e25;
   color: #d8f2ff;
   border-radius: 9px;
@@ -82,7 +81,6 @@ html, body {
 /* Instrucciones (derecha) */
 .instrucciones-col {
   flex: 1.6;
-  overflow-y: auto;
   font-size: 0.81rem;
   min-width: 0;
 }
@@ -183,11 +181,8 @@ html, body {
 /* ── Paneles de tabla (MASTER y MAT apilados) ── */
 
 .table-panel {
-  flex: 1;           /* reparten el espacio restante al 50% cada uno */
-  min-height: 0;     /* imprescindible para que flex recorte correctamente */
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .table-panel-head {
@@ -200,9 +195,8 @@ html, body {
 }
 
 .table-wrap {
-  flex: 1;
-  min-height: 0;
-  overflow-x: hidden;   /* sin scroll horizontal: columnas se adaptan al ancho */
+  max-height: 420px;
+  overflow-x: hidden;
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: 7px;
