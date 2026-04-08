@@ -351,7 +351,7 @@
     const allRows = getDatasetRows(datasetName);
     const headers = Object.keys(rows[0]).filter((h) => h !== "wpIndex");
 
-    const COL_WIDTHS = { num: "38px", title: "180px" };
+    const COL_WIDTHS = { num: "70px", title: "180px" };
     const colgroup = `<colgroup>${headers.map((h) => COL_WIDTHS[h] ? `<col style="width:${COL_WIDTHS[h]}">` : "<col>").join("")}</colgroup>`;
 
     // Fila de filtros tipo Excel (dentro del thead para que sticky funcione correctamente)
@@ -961,7 +961,7 @@
       ?? workbook.SheetNames.find((n) => normalizeUpper(n).includes("WORKPACKAGE"))
       ?? workbook.SheetNames[0];
     const ws = workbook.Sheets[sheetName];
-    const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+    const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: true });
     return parseWorkpackageVlgFromMatrix(matrix);
   }
 
