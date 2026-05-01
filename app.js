@@ -583,7 +583,8 @@
 
     const noSeq = text.replace(/SEQ\.?\s*\d+/gi, " ");
     const noApostrophe = noSeq.replace(/'/g, "");
-    const match8 = noApostrophe.match(/\b\d{8}\b/);
+    const noCommas = noApostrophe.replace(/(\d),(\d)/g, "$1$2");
+    const match8 = noCommas.match(/\b\d{8}\b/);
     if (match8) return match8[0];
 
     const tokens = noSeq.match(/\b[A-Z]{3}\b/g) || [];
@@ -591,6 +592,17 @@
     if (candidate) return candidate;
 
     return normalize(noSeq.split(/\s+/)[0]);
+  }
+
+  function deriveTitleFromPdfWoRaw(woRaw) {
+    return normalize(
+      normalize(woRaw)
+        .replace(/\b\d{2}\/\d{2}\/\d{2,4}\b/g, "")
+        .replace(/(\d),(\d)/g, "$1$2")
+        .replace(/\b\d{8}\b/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+    );
   }
 
   function groupPdfItemsByRow(items, tolerance) {
@@ -660,13 +672,14 @@
 
     for (const row of rawRows) {
       const itemNoRaw = normalize(row.itemNo);
-      const itemMatch = itemNoRaw.match(/^(\d+)\.?$/);
+      const itemMatch = itemNoRaw.match(/^(\d+)\.?\s*(.*)$/);
       const startsNew = Boolean(itemMatch);
       if (startsNew) {
         if (current) parsed.push(current);
+        const itemNoTail = normalize(itemMatch[2]);
         current = {
           num: itemMatch[1],
-          woRaw: normalize(row.wo),
+          woRaw: normalize([row.wo, itemNoTail].join(" ")),
           title: normalize(row.originating),
           reason: normalize(row.reason)
         };
@@ -681,13 +694,14 @@
 
     if (current) parsed.push(current);
 
+    const anyHasAdd = parsed.some((r) => normalizeUpper(`${r.reason} ${r.title} ${r.woRaw}`).includes("ADD"));
     return parsed
-      .filter((r) => normalizeUpper(`${r.reason} ${r.title} ${r.woRaw}`).includes("ADD"))
+      .filter((r) => !anyHasAdd || normalizeUpper(`${r.reason} ${r.title} ${r.woRaw}`).includes("ADD"))
       .map((r) => ({
         num: r.num,
         wo: extractWoFromPdfCell(r.woRaw),
         ata: "",
-        title: normalize(r.title)
+        title: normalizeTitleDisplay(normalize(r.title) || deriveTitleFromPdfWoRaw(r.woRaw))
       }))
       .filter((r) => r.num && r.title);
   }
@@ -729,7 +743,7 @@
       const rest = normalize(itemMatch[2]);
       let woRaw = rest;
       let reason = "";
-      const dateMatch = rest.match(/\b\d{2}\/\d{2}\/\d{4}\b/);
+      const dateMatch = rest.match(/\b\d{2}\/\d{2}\/\d{2,4}\b/);
       if (dateMatch && typeof dateMatch.index === "number") {
         woRaw = normalize(rest.slice(0, dateMatch.index));
         reason = normalize(rest.slice(dateMatch.index + dateMatch[0].length));
@@ -773,17 +787,32 @@
       entries[lastPos].suffix.push(...afterLastLines.slice(0, Math.ceil(afterLastLines.length / 2)));
     }
 
-    return itemPositions
+    const mapped = itemPositions
       .map((pos) => {
         const e = entries[pos];
+        const prefixSuffix = normalize([...e.prefix, ...e.suffix].join(" "));
+        const mergedText = normalize([e.woRaw, ...e.prefix, ...e.suffix].join(" "));
+        let mergedReason = normalize(e.reason);
+        if (!mergedReason) {
+          const reasonMatch = mergedText.match(/\b(ADD|CANX)\b/i);
+          if (reasonMatch && typeof reasonMatch.index === "number") {
+            mergedReason = normalize(mergedText.slice(reasonMatch.index));
+          }
+        }
+        // Fallback: when no surrounding lines exist (compact single-line format), derive
+        // the title from woRaw by stripping the W/O number and any date fragments.
+        const titleFromWoRaw = prefixSuffix || deriveTitleFromPdfWoRaw(mergedText);
         return {
           num: e.num,
-          woRaw: e.woRaw,
-          reason: e.reason,
-          title: normalize([...e.prefix, ...e.suffix].join(" "))
+          woRaw: mergedText,
+          reason: mergedReason,
+          title: titleFromWoRaw
         };
-      })
-      .filter((r) => normalizeUpper(r.reason).includes("ADD"))
+      });
+
+    const anyHasAdd = mapped.some((r) => normalizeUpper(`${r.reason} ${r.woRaw}`).includes("ADD"));
+    return mapped
+      .filter((r) => !anyHasAdd || normalizeUpper(`${r.reason} ${r.woRaw}`).includes("ADD"))
       .map((r) => ({
         num: r.num,
         wo: extractWoFromPdfCell(r.woRaw),
@@ -837,15 +866,25 @@
       let headerIdx = -1;
       let headerColumns = null;
       for (let i = 0; i < rows.length; i += 1) {
-        const joined = rows[i].items.map((x) => normalizeUpper(x.text)).join(" ");
-        if (joined.includes("ITEM") && joined.includes("REASON") && joined.includes("ORIGINATING")) {
-          const detected = detectPdfHeaderColumns(rows[i]);
-          if (detected) {
-            headerIdx = i;
-            headerColumns = detected;
-            break;
+        // Try single row first; if keywords are split across two adjacent rows (different Y
+        // coordinates > 2.5 pt tolerance), merge them and try again.
+        for (const candidateItems of [
+          rows[i].items,
+          i + 1 < rows.length ? [...rows[i].items, ...rows[i + 1].items] : null
+        ]) {
+          if (!candidateItems) continue;
+          const joined = candidateItems.map((x) => normalizeUpper(x.text)).join(" ");
+          if (joined.includes("ITEM") && joined.includes("REASON") && joined.includes("ORIGINATING")) {
+            const detected = detectPdfHeaderColumns({ items: candidateItems });
+            if (detected) {
+              // headerIdx points to the last row consumed so data starts after it
+              headerIdx = candidateItems === rows[i].items ? i : i + 1;
+              headerColumns = detected;
+              break;
+            }
           }
         }
+        if (headerIdx !== -1) break;
       }
       if (headerIdx === -1 || !headerColumns) continue;
 
@@ -866,7 +905,7 @@
       parsed = parseWorkpackagePdfRows(rawRows);
     }
     if (!parsed.length) {
-      throw new Error("No se detectaron registros validos en PDF (Reason debe contener ADD).");
+      throw new Error("No se detectaron registros validos en PDF.");
     }
     return parsed;
   }
